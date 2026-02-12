@@ -10,8 +10,6 @@ import Footer from './components/Footer.tsx';
 import Login from './components/Login.tsx';
 import Signup from './components/Signup.tsx';
 
-// Removed redundant manual declaration of 'aistudio' to prevent collision with the pre-configured AIStudio type provided by the environment.
-
 const App: React.FC = () => {
   const [view, setView] = useState<'landing' | 'login' | 'signup'>('landing');
   const [hasKey, setHasKey] = useState<boolean | null>(null);
@@ -19,18 +17,15 @@ const App: React.FC = () => {
 
   useEffect(() => {
     const checkKey = async () => {
-      // Check if platform requires key selection. Using 'any' to bypass declaration conflicts.
       const aistudio = (window as any).aistudio;
       if (aistudio) {
         try {
           const selected = await aistudio.hasSelectedApiKey();
           setHasKey(selected);
         } catch (e) {
-          console.error("Error checking API key status:", e);
           setHasKey(false);
         }
       } else {
-        // Fallback for local/other environments
         setHasKey(!!(typeof process !== 'undefined' && process.env?.API_KEY));
       }
     };
@@ -43,7 +38,6 @@ const App: React.FC = () => {
     if (aistudio) {
       try {
         await aistudio.openSelectKey();
-        // Per instructions: assume key selection was successful after triggering openSelectKey() to mitigate race conditions.
         setHasKey(true); 
       } catch (e) {
         console.error("Error opening key selector:", e);
@@ -61,34 +55,32 @@ const App: React.FC = () => {
     document.documentElement.classList.toggle('dark');
   };
 
-  if (hasKey === false) {
-    return (
-      <div className="min-h-screen bg-[#020617] flex flex-col items-center justify-center p-6 text-center">
-        <div className="max-w-md w-full bg-white/5 border border-white/10 p-12 rounded-[3rem] backdrop-blur-2xl">
-          <div className="w-20 h-20 bg-blue-600 rounded-[2rem] flex items-center justify-center mx-auto mb-8 shadow-[0_0_50px_rgba(37,99,235,0.3)]">
-            <span className="text-white font-black text-3xl">A</span>
-          </div>
-          <h1 className="text-3xl font-black text-white mb-4">Activate AdBuy AI</h1>
-          <p className="text-slate-400 mb-10 leading-relaxed">
-            To use the Gemini 3 media buying engine, you must select a valid API key from a paid Google Cloud project.
-          </p>
-          <button 
-            onClick={handleSelectKey}
-            className="w-full bg-white text-[#020617] font-black py-5 rounded-2xl hover:bg-blue-50 transition-all active:scale-95 shadow-xl"
-          >
-            Select API Key
-          </button>
-          <a 
-            href="https://ai.google.dev/gemini-api/docs/billing" 
-            target="_blank" 
-            className="block mt-6 text-xs font-bold text-slate-500 hover:text-blue-400 transition-colors uppercase tracking-widest"
-          >
-            Billing Documentation
-          </a>
+  const activationScreen = (
+    <div className="min-h-[80vh] flex flex-col items-center justify-center p-6 text-center">
+      <div className="max-w-md w-full bg-white/5 border border-white/10 p-12 rounded-[3rem] backdrop-blur-2xl">
+        <div className="w-20 h-20 bg-blue-600 rounded-[2rem] flex items-center justify-center mx-auto mb-8 shadow-[0_0_50px_rgba(37,99,235,0.3)]">
+          <span className="text-white font-black text-3xl">A</span>
         </div>
+        <h1 className="text-3xl font-black text-white mb-4">Activate AdBuy AI</h1>
+        <p className="text-slate-400 mb-10 leading-relaxed">
+          To use the Gemini 3 media buying engine, you must select a valid API key from a paid Google Cloud project.
+        </p>
+        <button 
+          onClick={handleSelectKey}
+          className="w-full bg-white text-[#020617] font-black py-5 rounded-2xl hover:bg-blue-50 transition-all active:scale-95 shadow-xl"
+        >
+          Select API Key
+        </button>
+        <a 
+          href="https://ai.google.dev/gemini-api/docs/billing" 
+          target="_blank" 
+          className="block mt-6 text-xs font-bold text-slate-500 hover:text-blue-400 transition-colors uppercase tracking-widest"
+        >
+          Billing Documentation
+        </a>
       </div>
-    );
-  }
+    </div>
+  );
 
   const mainContent = (
     <div className="bg-[#020617]">
@@ -134,21 +126,23 @@ const App: React.FC = () => {
 
   return (
     <div className={isDarkMode ? 'dark' : ''}>
-      <div className="min-h-screen bg-[#020617] text-slate-100">
+      <div className="min-h-screen bg-[#020617] text-slate-100 flex flex-col">
         <Navbar onNavigate={navigateTo} isDarkMode={isDarkMode} toggleDarkMode={toggleDarkMode} />
-        <main>
+        
+        <main className="flex-grow">
           {hasKey === null ? (
-            <div className="min-h-screen flex items-center justify-center">
+            <div className="min-h-[80vh] flex items-center justify-center">
               <div className="w-10 h-10 border-4 border-white/20 border-t-blue-500 rounded-full animate-spin"></div>
             </div>
           ) : (
             <>
-              {view === 'landing' && mainContent}
+              {view === 'landing' && (hasKey ? mainContent : activationScreen)}
               {view === 'login' && <Login onNavigate={navigateTo} />}
               {view === 'signup' && <Signup onNavigate={navigateTo} />}
             </>
           )}
         </main>
+
         <Footer />
       </div>
     </div>
