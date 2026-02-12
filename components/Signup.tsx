@@ -17,8 +17,8 @@ const Signup: React.FC<SignupProps> = ({ onNavigate }) => {
     setLoading(true);
     setErrorMsg(null);
 
+    // If we're already in demo mode or Supabase isn't configured, skip real auth
     if (isDemoMode || !supabase) {
-      // Simulate API delay
       setTimeout(() => {
         setSuccess(true);
         setLoading(false);
@@ -27,17 +27,34 @@ const Signup: React.FC<SignupProps> = ({ onNavigate }) => {
     }
 
     try {
-      const { error } = await supabase.auth.signUp({ email, password });
+      const { error } = await supabase.auth.signUp({ 
+        email, 
+        password,
+        options: {
+          emailRedirectTo: window.location.origin
+        }
+      });
+      
       if (error) {
-        setErrorMsg(error.message);
+        // Handle the specific rate limit error with a helpful UI message
+        if (error.message.includes("rate limit")) {
+          setErrorMsg("The authentication server is rate-limited. Please use 'Demo Mode' to skip verification.");
+        } else {
+          setErrorMsg(error.message);
+        }
       } else {
         setSuccess(true);
       }
     } catch (err: any) {
-      setErrorMsg("An unexpected error occurred. Please try again.");
+      setErrorMsg("An unexpected error occurred. Please try Demo Mode.");
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleSkipToDemo = () => {
+    // Navigate directly to landing as if logged in
+    onNavigate('landing');
   };
 
   if (success) {
@@ -51,7 +68,7 @@ const Signup: React.FC<SignupProps> = ({ onNavigate }) => {
           </div>
           <h2 className="text-3xl font-bold text-white mb-4">Account Created</h2>
           <p className="text-slate-400 mb-10 leading-relaxed">
-            {isDemoMode 
+            {isDemoMode || !supabase
               ? "Your demo account is ready! You can now log in using Demo Mode."
               : "Check your email for a confirmation link to activate your account."}
           </p>
@@ -78,8 +95,16 @@ const Signup: React.FC<SignupProps> = ({ onNavigate }) => {
           </div>
 
           {errorMsg && (
-            <div className="mb-6 p-4 bg-red-500/10 border border-red-500/20 rounded-xl text-red-400 text-sm font-medium">
-              {errorMsg}
+            <div className="mb-6 p-4 bg-red-500/10 border border-red-500/20 rounded-xl flex flex-col gap-3">
+              <span className="text-red-400 text-sm font-medium">{errorMsg}</span>
+              {errorMsg.includes("rate limit") && (
+                <button 
+                  onClick={handleSkipToDemo}
+                  className="text-xs font-bold text-white bg-red-500/20 py-2 rounded-lg hover:bg-red-500/30 transition-all border border-red-500/20"
+                >
+                  Skip Verification & Launch Demo →
+                </button>
+              )}
             </div>
           )}
 
@@ -114,6 +139,19 @@ const Signup: React.FC<SignupProps> = ({ onNavigate }) => {
               className="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-4 rounded-xl transition-all shadow-lg active:scale-95 flex items-center justify-center gap-2 disabled:opacity-50"
             >
               {loading ? <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div> : 'Create Free Account'}
+            </button>
+
+            <div className="relative py-4">
+              <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-white/5"></div></div>
+              <div className="relative flex justify-center text-xs uppercase"><span className="bg-[#0b0f1a] px-2 text-slate-500 font-bold tracking-widest">or</span></div>
+            </div>
+
+            <button 
+              type="button"
+              onClick={handleSkipToDemo}
+              className="w-full bg-white/5 hover:bg-white/10 border border-white/10 text-white font-bold py-4 rounded-xl transition-all active:scale-95 flex items-center justify-center gap-2"
+            >
+              🚀 Continue in Demo Mode
             </button>
           </form>
 
