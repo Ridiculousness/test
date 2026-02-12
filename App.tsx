@@ -15,21 +15,26 @@ const App: React.FC = () => {
   const [hasKey, setHasKey] = useState<boolean | null>(null);
   const [isDarkMode, setIsDarkMode] = useState(true);
 
-  useEffect(() => {
-    const checkKey = async () => {
-      const aistudio = (window as any).aistudio;
-      if (aistudio) {
-        try {
-          const selected = await aistudio.hasSelectedApiKey();
-          setHasKey(selected);
-        } catch (e) {
-          setHasKey(false);
-        }
-      } else {
-        setHasKey(!!(typeof process !== 'undefined' && process.env?.API_KEY));
+  const checkKeyStatus = async () => {
+    const aistudio = (window as any).aistudio;
+    if (aistudio) {
+      try {
+        const selected = await aistudio.hasSelectedApiKey();
+        setHasKey(selected);
+        return selected;
+      } catch (e) {
+        setHasKey(false);
+        return false;
       }
-    };
-    checkKey();
+    } else {
+      const exists = !!(typeof process !== 'undefined' && process.env?.API_KEY);
+      setHasKey(exists);
+      return exists;
+    }
+  };
+
+  useEffect(() => {
+    checkKeyStatus();
     document.documentElement.classList.add('dark');
   }, []);
 
@@ -55,34 +60,7 @@ const App: React.FC = () => {
     document.documentElement.classList.toggle('dark');
   };
 
-  const activationScreen = (
-    <div className="min-h-[80vh] flex flex-col items-center justify-center p-6 text-center">
-      <div className="max-w-md w-full bg-white/5 border border-white/10 p-12 rounded-[3rem] backdrop-blur-2xl">
-        <div className="w-20 h-20 bg-blue-600 rounded-[2rem] flex items-center justify-center mx-auto mb-8 shadow-[0_0_50px_rgba(37,99,235,0.3)]">
-          <span className="text-white font-black text-3xl">A</span>
-        </div>
-        <h1 className="text-3xl font-black text-white mb-4">Activate AdBuy AI</h1>
-        <p className="text-slate-400 mb-10 leading-relaxed">
-          To use the Gemini 3 media buying engine, you must select a valid API key from a paid Google Cloud project.
-        </p>
-        <button 
-          onClick={handleSelectKey}
-          className="w-full bg-white text-[#020617] font-black py-5 rounded-2xl hover:bg-blue-50 transition-all active:scale-95 shadow-xl"
-        >
-          Select API Key
-        </button>
-        <a 
-          href="https://ai.google.dev/gemini-api/docs/billing" 
-          target="_blank" 
-          className="block mt-6 text-xs font-bold text-slate-500 hover:text-blue-400 transition-colors uppercase tracking-widest"
-        >
-          Billing Documentation
-        </a>
-      </div>
-    </div>
-  );
-
-  const mainContent = (
+  const landingPage = (
     <div className="bg-[#020617]">
       <Hero onNavigate={navigateTo} />
       
@@ -105,8 +83,8 @@ const App: React.FC = () => {
       
       <div className="h-px w-full bg-gradient-to-r from-transparent via-white/[0.05] to-transparent"></div>
       
-      <CreativeLab />
-      <StrategyGenerator />
+      <CreativeLab hasKey={!!hasKey} onActivate={handleSelectKey} />
+      <StrategyGenerator hasKey={!!hasKey} onActivate={handleSelectKey} />
       <Pricing />
 
       <section className="py-48 bg-[#020617] relative overflow-hidden">
@@ -130,17 +108,9 @@ const App: React.FC = () => {
         <Navbar onNavigate={navigateTo} isDarkMode={isDarkMode} toggleDarkMode={toggleDarkMode} />
         
         <main className="flex-grow">
-          {hasKey === null ? (
-            <div className="min-h-[80vh] flex items-center justify-center">
-              <div className="w-10 h-10 border-4 border-white/20 border-t-blue-500 rounded-full animate-spin"></div>
-            </div>
-          ) : (
-            <>
-              {view === 'landing' && (hasKey ? mainContent : activationScreen)}
-              {view === 'login' && <Login onNavigate={navigateTo} />}
-              {view === 'signup' && <Signup onNavigate={navigateTo} />}
-            </>
-          )}
+          {view === 'landing' && landingPage}
+          {view === 'login' && <Login onNavigate={navigateTo} />}
+          {view === 'signup' && <Signup onNavigate={navigateTo} />}
         </main>
 
         <Footer />
