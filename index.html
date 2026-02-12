@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -7,6 +6,9 @@
     <title>AdBuy.ai - AI-Powered Media Buying</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
+      // Prevent crash if a library expects 'process' to exist
+      window.process = window.process || { env: {} };
+      
       tailwind.config = {
         darkMode: 'class',
         theme: {
@@ -55,5 +57,7 @@
 </head>
 <body class="bg-white text-slate-900">
     <div id="root"></div>
+    <!-- Load the main application entry point -->
+    <script type="module" src="index.tsx"></script>
 </body>
 </html>

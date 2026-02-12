@@ -1,13 +1,19 @@
-
 import { GoogleGenAI, Type } from "@google/genai";
 
-const API_KEY = process.env.API_KEY || "";
+// Safe access to process.env to prevent ReferenceError in browser
+const getApiKey = () => {
+  try {
+    return (typeof process !== 'undefined' && process.env?.API_KEY) || "";
+  } catch {
+    return "";
+  }
+};
 
 export class GeminiService {
   private ai: GoogleGenAI;
 
   constructor() {
-    this.ai = new GoogleGenAI({ apiKey: API_KEY });
+    this.ai = new GoogleGenAI({ apiKey: getApiKey() });
   }
 
   async generateAdStrategy(productInfo: string): Promise<any> {
