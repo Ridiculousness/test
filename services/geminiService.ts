@@ -3,11 +3,28 @@ import { GoogleGenAI, Type } from "@google/genai";
 export class GeminiService {
   /**
    * Returns a fresh instance of GoogleGenAI using the current environment's API key.
-   * Initializing lazily inside methods prevents top-level crashes during deployment.
+   * We instantiate here to ensure we always get the latest key from the dialog.
    */
   private getClient(): GoogleGenAI {
     const apiKey = (typeof process !== 'undefined' && process.env?.API_KEY) || "";
+    if (!apiKey) {
+      throw new Error("API key missing. Please activate with an API key.");
+    }
     return new GoogleGenAI({ apiKey });
+  }
+
+  private handleApiError(error: any) {
+    console.error("Gemini API Error:", error);
+    
+    // Check if the error indicates a missing or invalid key
+    if (error.message?.includes("Requested entity was not found") || 
+        error.message?.includes("API key not found")) {
+      // Re-trigger key selection by reloading or notifying UI
+      if (window.aistudio) {
+        window.aistudio.openSelectKey().then(() => window.location.reload());
+      }
+    }
+    throw error;
   }
 
   async generateAdStrategy(productInfo: string): Promise<any> {
@@ -36,8 +53,7 @@ export class GeminiService {
 
       return JSON.parse(response.text || "{}");
     } catch (error) {
-      console.error("Gemini Strategy Generation Error:", error);
-      throw error;
+      this.handleApiError(error);
     }
   }
 
@@ -53,6 +69,10 @@ export class GeminiService {
         }
       });
 
+      if (!response.candidates?.[0]?.content?.parts) {
+        throw new Error("Invalid response format from Gemini");
+      }
+
       for (const part of response.candidates[0].content.parts) {
         if (part.inlineData) {
           const base64EncodeString: string = part.inlineData.data;
@@ -61,8 +81,7 @@ export class GeminiService {
       }
       throw new Error("No image data returned from Gemini");
     } catch (error) {
-      console.error("Gemini Image Generation Error:", error);
-      throw error;
+      this.handleApiError(error);
     }
   }
 }
