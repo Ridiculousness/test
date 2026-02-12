@@ -1,24 +1,19 @@
 import { GoogleGenAI, Type } from "@google/genai";
 
-// Safe access to process.env to prevent ReferenceError in browser
-const getApiKey = () => {
-  try {
-    return (typeof process !== 'undefined' && process.env?.API_KEY) || "";
-  } catch {
-    return "";
-  }
-};
-
 export class GeminiService {
-  private ai: GoogleGenAI;
-
-  constructor() {
-    this.ai = new GoogleGenAI({ apiKey: getApiKey() });
+  /**
+   * Returns a fresh instance of GoogleGenAI using the current environment's API key.
+   * Initializing lazily inside methods prevents top-level crashes during deployment.
+   */
+  private getClient(): GoogleGenAI {
+    const apiKey = (typeof process !== 'undefined' && process.env?.API_KEY) || "";
+    return new GoogleGenAI({ apiKey });
   }
 
   async generateAdStrategy(productInfo: string): Promise<any> {
     try {
-      const response = await this.ai.models.generateContent({
+      const ai = this.getClient();
+      const response = await ai.models.generateContent({
         model: "gemini-3-flash-preview",
         contents: `Act as a senior media buyer at AdBuy.ai. Create a comprehensive advertising strategy for: ${productInfo}`,
         config: {
@@ -48,7 +43,8 @@ export class GeminiService {
 
   async generateAdCreative(prompt: string): Promise<string> {
     try {
-      const response = await this.ai.models.generateContent({
+      const ai = this.getClient();
+      const response = await ai.models.generateContent({
         model: 'gemini-2.5-flash-image',
         contents: {
           parts: [
@@ -59,10 +55,11 @@ export class GeminiService {
 
       for (const part of response.candidates[0].content.parts) {
         if (part.inlineData) {
-          return `data:image/png;base64,${part.inlineData.data}`;
+          const base64EncodeString: string = part.inlineData.data;
+          return `data:image/png;base64,${base64EncodeString}`;
         }
       }
-      throw new Error("No image data returned");
+      throw new Error("No image data returned from Gemini");
     } catch (error) {
       console.error("Gemini Image Generation Error:", error);
       throw error;
